@@ -650,16 +650,56 @@ def get_alerts():
 
     credits = read_json("credit-status.json") or {}
     for provider, data in credits.get("providers", {}).items():
-        usage = data.get("usage", 0)
-        limit = data.get("limit")
-        threshold = data.get("alert_threshold", 80)
-        if limit and limit > 0:
+        status = data.get("status", "unknown")
+        if status in ("unlimited", "unknown"):
+            continue
+
+        balance   = data.get("balance")   # remaining $ (OpenRouter style)
+        usage     = data.get("usage")     # $ spent
+        limit     = data.get("limit")     # monthly $ cap
+        threshold = data.get("alert_threshold")  # % based override
+
+        # --- Balance-remaining style (OpenRouter: balance < warn threshold) ---
+        budget_thresholds = credits.get("budget", {}).get("alertThresholds", {}).get(provider, {})
+        warn_at     = budget_thresholds.get("warn", 20)     # $ remaining
+        critical_at = budget_thresholds.get("critical", 10)
+
+        if balance is not None:
+            if balance <= critical_at:
+                level = "critical"
+            elif balance <= warn_at:
+                level = "warning"
+            else:
+                level = None
+
+            if level:
+                alerts.append({
+                    "id": f"credit-{provider}",
+                    "level": level,
+                    "type": "credit_low",
+                    "title": f"{'Critical' if level == 'critical' else 'Low'} balance: {provider}",
+                    "message": f"${balance:.2f} remaining (warn at ${warn_at})",
+                    "provider": provider,
+                    "timestamp": now_iso(),
+                })
+            continue
+
+        # --- Percentage-based style (Anthropic tokens via usage/limit) ---
+        if threshold is None:
+            threshold = 80
+        if limit and limit > 0 and usage is not None:
             pct = (usage / limit) * 100
             if pct >= threshold:
                 level = "critical" if pct >= 95 else "warning"
-                alerts.append({"id": f"credit-{provider}", "level": level, "type": "credit_low",
-                               "title": f"{'Critical' if level == 'critical' else 'Low'} credits: {provider}",
-                               "message": f"{provider} at {pct:.0f}% of limit", "provider": provider, "timestamp": now_iso()})
+                alerts.append({
+                    "id": f"credit-{provider}",
+                    "level": level,
+                    "type": "credit_low",
+                    "title": f"{'Critical' if level == 'critical' else 'Low'} credits: {provider}",
+                    "message": f"{provider} at {pct:.0f}% of limit",
+                    "provider": provider,
+                    "timestamp": now_iso(),
+                })
 
     alerts.sort(key=lambda a: 0 if a["level"] == "critical" else 1)
     return jsonify({"alerts": alerts, "count": len(alerts), "critical": len([a for a in alerts if a["level"] == "critical"]),
