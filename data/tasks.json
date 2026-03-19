@@ -1,0 +1,239 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-002",
+      "title": "Build idea capture pipeline",
+      "description": "Create system to detect ideas from Telegram messages and log them to ideas.json with categorization",
+      "project": "aeva-os",
+      "status": "done",
+      "assignee": "aeva",
+      "complexity": "medium",
+      "createdAt": "2026-03-17T13:28:00Z",
+      "createdBy": "aeva",
+      "completedAt": "2026-03-19T05:22:07Z",
+      "notes": [],
+      "priority_score": 140,
+      "last_prioritized": "2026-03-18T17:01:23Z",
+      "_score_breakdown": {
+        "status": 30,
+        "urgency": 45,
+        "impact": 60,
+        "effort": -10,
+        "deadline": 0,
+        "bonuses": {
+          "assignee": 10,
+          "description": 5,
+          "blocks_others": 0,
+          "critical_path": 0,
+          "waiting_external": 0,
+          "is_blocked": 0
+        }
+      },
+      "priority_rank": 1,
+      "urgency": "high",
+      "impact": "high",
+      "effort": "medium",
+      "last_updated": "2026-03-19T05:22:07Z",
+      "activity_log": [
+        {
+          "timestamp": "2026-03-18T14:08:39Z",
+          "status": "ready",
+          "note": "Testing blocker detection system"
+        },
+        {
+          "timestamp": "2026-03-19T05:22:07Z",
+          "status": "in-progress",
+          "note": "Task executor started autonomous execution"
+        },
+        {
+          "timestamp": "2026-03-19T05:22:07Z",
+          "status": "done",
+          "note": "Idea capture pipeline built: capture-idea.sh + idea-patterns.json + HEARTBEAT.md integration. Tested successfully."
+        }
+      ],
+      "is_blocked": false,
+      "days_stuck": 0
+    },
+    {
+      "id": "TASK-005",
+      "title": "Build Virtual Office Dashboard UI",
+      "description": "Create Office tab in Mission Control dashboard showing live agent status, activity feed, and meeting room chat interface",
+      "project": "aeva-os",
+      "status": "ready",
+      "assignee": "clara",
+      "complexity": "medium",
+      "createdAt": "2026-03-18T05:57:00Z",
+      "createdBy": "aeva",
+      "completedAt": null,
+      "notes": [
+        "Backend files created by Aeva: agents-registry.json, activity-feed.jsonl, meeting-room.json, transcripts/",
+        "Task spec: /data/workspace/aeva-os/mission-control/tasks/TASK-005-office-dashboard.md",
+        "Estimated 2h build time (backend + frontend + deploy)"
+      ],
+      "urgency": "medium",
+      "impact": "high",
+      "effort": "high",
+      "deadline": "2026-03-25",
+      "priority_score": 130,
+      "last_prioritized": "2026-03-18T17:01:23Z",
+      "_score_breakdown": {
+        "status": 30,
+        "urgency": 30,
+        "impact": 60,
+        "effort": -5,
+        "deadline": 0,
+        "bonuses": {
+          "assignee": 10,
+          "description": 5,
+          "blocks_others": 0,
+          "critical_path": 0,
+          "waiting_external": 0,
+          "is_blocked": 0
+        }
+      },
+      "priority_rank": 2,
+      "is_blocked": false,
+      "days_stuck": 0
+    },
+    {
+      "id": "TASK-001",
+      "title": "Set up credit monitoring cron jobs",
+      "description": "Create hourly credit check cron job that updates credit-status.json and alerts on Telegram when thresholds are crossed",
+      "project": "aeva-os",
+      "status": "done",
+      "assignee": "aeva",
+      "complexity": "low",
+      "createdAt": "2026-03-17T13:28:00Z",
+      "createdBy": "aeva",
+      "completedAt": "2026-03-17T13:33:23Z",
+      "notes": [
+        "Credit monitoring cron job created (every 2h). check-credits.sh tested and working. OpenRouter balance: $148.92. Morning briefing (9 AM), evening review (6 PM weekdays), and weekly memory compression (Sunday 8 PM) cron jobs all active."
+      ],
+      "priority_score": 75,
+      "last_prioritized": "2026-03-18T17:01:23Z",
+      "_score_breakdown": {
+        "status": 0,
+        "urgency": 30,
+        "impact": 40,
+        "effort": -10,
+        "deadline": 0,
+        "bonuses": {
+          "assignee": 10,
+          "description": 5,
+          "blocks_others": 0,
+          "critical_path": 0,
+          "waiting_external": 0,
+          "is_blocked": 0
+        }
+      },
+      "priority_rank": 3,
+      "is_blocked": false,
+      "days_stuck": 0
+    },
+    {
+      "id": "TASK-003",
+      "title": "Set up morning and evening briefing cron jobs",
+      "description": "Morning (9 AM) and evening (6 PM) cron jobs for daily briefings via Telegram",
+      "project": "aeva-os",
+      "status": "done",
+      "assignee": "aeva",
+      "complexity": "low",
+      "createdAt": "2026-03-17T13:28:00Z",
+      "createdBy": "aeva",
+      "completedAt": "2026-03-17T13:33:29Z",
+      "notes": [
+        "Morning briefing (9 AM daily) and evening review (6 PM weekdays) cron jobs configured and active. Weekly memory compression (Sunday 8 PM) also set up."
+      ],
+      "priority_score": 75,
+      "last_prioritized": "2026-03-18T17:01:23Z",
+      "_score_breakdown": {
+        "status": 0,
+        "urgency": 30,
+        "impact": 40,
+        "effort": -10,
+        "deadline": 0,
+        "bonuses": {
+          "assignee": 10,
+          "description": 5,
+          "blocks_others": 0,
+          "critical_path": 0,
+          "waiting_external": 0,
+          "is_blocked": 0
+        }
+      },
+      "priority_rank": 4,
+      "is_blocked": false,
+      "days_stuck": 0
+    },
+    {
+      "id": "TASK-004",
+      "title": "Investigate qmd-skill GitHub repo",
+      "description": "Review https://github.com/levineam/qmd-skill for potential integration or learning.",
+      "project": "aeva-os",
+      "status": "done",
+      "assignee": "aeva",
+      "complexity": "low",
+      "createdAt": "2026-03-17T14:29:27Z",
+      "createdBy": "aeva",
+      "completedAt": "2026-03-19T05:22:15Z",
+      "notes": [],
+      "priority_score": 65,
+      "last_prioritized": "2026-03-18T17:01:23Z",
+      "_score_breakdown": {
+        "status": 30,
+        "urgency": 15,
+        "impact": 20,
+        "effort": -15,
+        "deadline": 0,
+        "bonuses": {
+          "assignee": 10,
+          "description": 5,
+          "blocks_others": 0,
+          "critical_path": 0,
+          "waiting_external": 0,
+          "is_blocked": 0
+        }
+      },
+      "priority_rank": 5,
+      "urgency": "low",
+      "impact": "low",
+      "effort": "low",
+      "is_blocked": false,
+      "days_stuck": 0,
+      "last_updated": "2026-03-19T05:22:15Z",
+      "activity_log": [
+        {
+          "timestamp": "2026-03-19T05:22:14Z",
+          "status": "in-progress",
+          "note": "Task executor started autonomous execution"
+        },
+        {
+          "timestamp": "2026-03-19T05:22:15Z",
+          "status": "done",
+          "note": "Investigated qmd-skill repo. Findings documented in tasks/TASK-004-qmd-findings.md. Ready for review."
+        }
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Deploy Mission Control UI to Vercel",
+      "description": "Deploy aevaos-mission-control-ui to Vercel production. Features: qmd search widget + Office tab. GitHub workflow configured. Ready for production deployment.",
+      "project": "aeva-os",
+      "status": "ready",
+      "assignee": "aeva",
+      "complexity": "low",
+      "createdAt": "2026-03-19T05:31:29Z",
+      "createdBy": "aeva",
+      "completedAt": null,
+      "notes": [],
+      "urgency": "medium",
+      "impact": "high",
+      "effort": "low",
+      "priority_score": 0,
+      "is_blocked": false,
+      "days_stuck": 0
+    }
+  ],
+  "version": 1,
+  "nextId": 7
+}

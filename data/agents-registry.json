@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-03-18T06:25:45Z",
+  "agents": {
+    "aeva": {
+      "id": "aeva",
+      "name": "Aeva",
+      "emoji": "🌀",
+      "role": "Strategic Orchestrator & Human Interface",
+      "model": "anthropic/claude-sonnet-4-5",
+      "status": "active",
+      "sessionKey": "agent:main:main",
+      "currentTask": null,
+      "currentProject": null,
+      "capabilities": [
+        "strategic-planning",
+        "user-communication",
+        "orchestration",
+        "decision-making",
+        "memory-management"
+      ],
+      "preferences": {
+        "workingHours": "24/7",
+        "responseStyle": "Direct, honest, strategic",
+        "delegation": "High autonomy agents"
+      },
+      "lastSeen": "2026-03-18T05:58:23Z",
+      "lastActivity": "Building virtual office coordination system",
+      "metrics": {
+        "tasksCompleted": 0,
+        "averageResponseTime": null,
+        "collaborations": 0
+      }
+    },
+    "clara": {
+      "id": "clara",
+      "name": "Clara",
+      "emoji": "👩‍💻",
+      "role": "Coding Assistant",
+      "model": "openai/gpt-5.3-codex",
+      "status": "idle",
+      "sessionKey": null,
+      "currentTask": null,
+      "currentProject": null,
+      "capabilities": [
+        "full-stack-development",
+        "bug-fixing",
+        "code-review",
+        "api-integration",
+        "testing",
+        "devops"
+      ],
+      "preferences": {
+        "languages": [
+          "TypeScript",
+          "Python",
+          "JavaScript"
+        ],
+        "frameworks": [
+          "Next.js",
+          "Flask",
+          "FastAPI"
+        ],
+        "style": "Clean, documented, production-ready",
+        "testing": "Write tests when appropriate"
+      },
+      "lastSeen": "2026-03-18T06:25:45Z",
+      "lastActivity": "Blocked on Railway token",
+      "metrics": {
+        "tasksCompleted": 0,
+        "averageResponseTime": null,
+        "collaborations": 0
+      }
+    }
+  },
+  "metadata": {
+    "totalAgents": 2,
+    "activeAgents": 1,
+    "idleAgents": 1
+  }
+}

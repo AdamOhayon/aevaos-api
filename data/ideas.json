@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "ideas": [
+    {
+      "id": "IDEA-001",
+      "title": "Agent-to-Agent Future",
+      "description": "Post-app world where user agents negotiate directly with service agents. Apps become obsolete.",
+      "category": "vision",
+      "complexity": "high",
+      "source": "voice-recording",
+      "sourceDate": "2026-02-25T13:32:16Z",
+      "capturedAt": "2026-03-17T12:00:00Z",
+      "status": "documented",
+      "relatedProject": "agent-to-agent-future",
+      "notionUrl": "https://www.notion.so/The-Agent-to-Agent-Future-3266a996d06a810eab7dc5693a6d0a6a",
+      "tags": [
+        "agents",
+        "future",
+        "paradigm-shift",
+        "protocol"
+      ]
+    },
+    {
+      "id": "IDEA-002",
+      "title": "AevaOS Mission Control",
+      "description": "Build a custom control command center within OpenClaw, combining LifeOS concepts with OpenClaw capabilities. Proactive AI agent with credit awareness, task execution, and idea tracking.",
+      "category": "project",
+      "complexity": "high",
+      "source": "conversation",
+      "sourceDate": "2026-03-17T13:23:00Z",
+      "capturedAt": "2026-03-17T13:28:00Z",
+      "status": "in-progress",
+      "relatedProject": "aeva-os",
+      "tags": [
+        "infrastructure",
+        "automation",
+        "collaboration",
+        "mission-control"
+      ]
+    },
+    {
+      "id": "IDEA-003",
+      "title": "Test idea from task executor",
+      "description": "This is a test idea to verify the capture pipeline works",
+      "category": "research",
+      "source": "automated-test",
+      "capturedAt": "2026-03-19T05:22:07Z",
+      "promotedToTask": false,
+      "taskId": null,
+      "tags": [],
+      "notes": []
+    }
+  ],
+  "nextId": 4
+}

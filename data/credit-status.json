@@ -1,0 +1,42 @@
+{
+  "lastChecked": "2026-03-19T05:02:16Z",
+  "providers": {
+    "openrouter": {
+      "balance": 134.77,
+      "limit": 150,
+      "usage": 15.227835,
+      "status": "healthy",
+      "lastChecked": "2026-03-19T05:02:16Z"
+    },
+    "anthropic": {
+      "tokensUsed": null,
+      "tokensRemaining": null,
+      "contextWindow": null,
+      "status": "unknown",
+      "lastChecked": null
+    },
+    "google": {
+      "status": "unlimited",
+      "lastChecked": null
+    }
+  },
+  "alerts": {
+    "history": []
+  },
+  "budget": {
+    "monthlyLimit": 150,
+    "dailyTarget": 5,
+    "alertThresholds": {
+      "openrouter": {
+        "warn": 20,
+        "critical": 10,
+        "emergency": 5
+      },
+      "anthropic_tokens": {
+        "warn": 100000,
+        "critical": 50000,
+        "emergency": 25000
+      }
+    }
+  }
+}

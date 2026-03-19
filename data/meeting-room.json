@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "rooms": {
+    "main-office": {
+      "id": "main-office",
+      "name": "Main Office",
+      "description": "General coordination and daily standups",
+      "participants": ["aeva", "clara"],
+      "active": true,
+      "createdAt": "2026-03-18T05:57:00Z",
+      "transcriptPath": "transcripts/main-office.jsonl"
+    }
+  },
+  "metadata": {
+    "totalRooms": 1,
+    "activeRooms": 1
+  }
+}

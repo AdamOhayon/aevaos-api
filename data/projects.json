@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "aeva-os",
+      "name": "AevaOS Mission Control",
+      "description": "Custom control command center built within OpenClaw",
+      "status": "active",
+      "priority": 1,
+      "github": null,
+      "health": "green",
+      "lastActivity": "2026-03-17T13:28:00Z"
+    },
+    {
+      "id": "leanleren",
+      "name": "LeanLeren",
+      "description": "Lean Six Sigma training platform - MAKING MONEY",
+      "status": "active",
+      "priority": 2,
+      "github": "AdamOhayon/leanleren",
+      "health": "yellow",
+      "lastActivity": "2026-02-19T00:00:00Z"
+    },
+    {
+      "id": "pilotax",
+      "name": "PiloTax",
+      "description": "Dutch tax automation app",
+      "status": "active",
+      "priority": 3,
+      "github": "AdamOhayon/PiloTax",
+      "health": "yellow",
+      "lastActivity": "2026-02-23T00:00:00Z"
+    },
+    {
+      "id": "agent-to-agent-future",
+      "name": "Agent-to-Agent Future",
+      "description": "Vision for post-app world with agent-to-agent communication",
+      "status": "active",
+      "priority": 4,
+      "github": null,
+      "health": "green",
+      "lastActivity": "2026-03-17T12:00:00Z"
+    },
+    {
+      "id": "crewplanet",
+      "name": "CrewPlanet",
+      "description": "Airline crew social app",
+      "status": "paused",
+      "priority": 5,
+      "github": "AdamOhayon/crewplanet",
+      "health": "yellow",
+      "lastActivity": "2026-02-21T00:00:00Z"
+    },
+    {
+      "id": "lifeos",
+      "name": "LifeOS / LifeTrack",
+      "description": "AI-powered self-discovery + modular life OS. Dream project.",
+      "status": "paused",
+      "priority": 6,
+      "github": "AdamOhayon/lifeOS",
+      "health": "unknown",
+      "lastActivity": "2025-01-28T00:00:00Z"
+    }
+  ]
+}
