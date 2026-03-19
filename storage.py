@@ -67,7 +67,7 @@ def _parse_dt(s: str) -> datetime.datetime | None:
 
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
-def storage_get_tasks(status=None, assignee=None, priority=None) -> dict:
+def storage_get_tasks(status=None, assignee=None, priority=None, project=None) -> dict:
     if USE_DB:
         q = Task.query
         if status:
@@ -76,6 +76,8 @@ def storage_get_tasks(status=None, assignee=None, priority=None) -> dict:
             q = q.filter(Task.assignee == assignee)
         if priority:
             q = q.filter((Task.urgency == priority) | (Task.priority == priority))
+        if project:
+            q = q.filter(Task.project == project)
         tasks = [t.to_dict() for t in q.all()]
         return {"tasks": tasks, "version": 2}
 
@@ -87,6 +89,8 @@ def storage_get_tasks(status=None, assignee=None, priority=None) -> dict:
         tasks = [t for t in tasks if t.get("assignee") == assignee]
     if priority:
         tasks = [t for t in tasks if t.get("urgency") == priority or t.get("priority") == priority]
+    if project:
+        tasks = [t for t in tasks if t.get("project") == project]
     data["tasks"] = tasks
     return data
 

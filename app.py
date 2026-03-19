@@ -270,6 +270,53 @@ def get_credits():
     return jsonify(credits)
 
 
+@app.route("/api/credits/refresh", methods=["POST"])
+def refresh_credits():
+    """
+    Fetch live OpenRouter balance and update credit-status.json.
+    Requires OPENROUTER_API_KEY env var.
+    """
+    import urllib.request
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "OPENROUTER_API_KEY not set"}), 503
+
+    try:
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/auth/key",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        balance = data.get("data", {}).get("limit_remaining", None)
+        usage   = data.get("data", {}).get("usage", None)
+        limit   = data.get("data", {}).get("limit", None)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+    credits = read_json("credit-status.json") or {"providers": {}}
+    providers = credits.get("providers", {})
+    if "openrouter" not in providers:
+        providers["openrouter"] = {}
+    if balance is not None:
+        providers["openrouter"]["balance"] = round(float(balance), 4)
+    if usage is not None:
+        providers["openrouter"]["usage"] = round(float(usage), 4)
+    if limit is not None:
+        providers["openrouter"]["limit"] = round(float(limit), 4)
+    providers["openrouter"]["status"] = "active"
+    credits["providers"] = providers
+    credits["lastChecked"] = now_iso()
+    write_json("credit-status.json", credits)
+
+    storage_append_activity(
+        agent="system", action="credits_refreshed",
+        message=f"OpenRouter balance refreshed: ${balance:.2f}" if balance else "Credits refreshed",
+        metadata={"provider": "openrouter", "balance": balance},
+    )
+    return jsonify({"success": True, "balance": balance, "lastChecked": credits["lastChecked"]})
+
+
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
@@ -279,8 +326,10 @@ def get_tasks():
     status_filter   = request.args.get("status")
     assignee_filter = request.args.get("assignee")
     priority_filter = request.args.get("priority")
+    project_filter  = request.args.get("project")
     return jsonify(storage_get_tasks(
-        status=status_filter, assignee=assignee_filter, priority=priority_filter
+        status=status_filter, assignee=assignee_filter,
+        priority=priority_filter, project=project_filter,
     ))
 
 
