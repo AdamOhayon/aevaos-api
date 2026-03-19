@@ -11,6 +11,7 @@ from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 import json
 import os
+import datetime
 
 app = Flask(__name__)
 CORS(app)  # Allow all origins (Vercel frontend, local dev, etc.)
@@ -49,6 +50,10 @@ def read_jsonl(filename: str, limit: int = 50) -> list:
     return [json.loads(line) for line in lines[-limit:] if line.strip()]
 
 
+def now_iso() -> str:
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
@@ -58,7 +63,7 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "aevaos-api",
-        "version": "1.0.0",
+        "version": "1.1.0",
     })
 
 
@@ -74,11 +79,56 @@ def get_agents():
     return jsonify(agents)
 
 
+@app.route("/api/office/agents/<agent_id>", methods=["PATCH"])
+def update_agent(agent_id):
+    """Update an agent's status, currentTask, lastActivity, etc."""
+    data = request.get_json()
+    if not data:
+        abort(400, description="Invalid JSON payload")
+
+    registry = read_json("agents-registry.json") or {"agents": {}, "metadata": {}}
+    agents = registry.get("agents", {})
+    if agent_id not in agents:
+        abort(404, description=f"Agent '{agent_id}' not found")
+
+    allowed = {"status", "currentTask", "lastActivity", "currentModel"}
+    for key, val in data.items():
+        if key in allowed:
+            agents[agent_id][key] = val
+
+    agents[agent_id]["last_updated"] = now_iso()
+    registry["agents"] = agents
+    write_json("agents-registry.json", registry)
+    return jsonify(agents[agent_id])
+
+
 @app.route("/api/office/activity", methods=["GET"])
 def get_activity():
     limit = request.args.get("limit", 50, type=int)
     entries = read_jsonl("activity-feed.jsonl", limit)
     return jsonify(entries)
+
+
+@app.route("/api/office/activity", methods=["POST"])
+def post_activity():
+    """Log an activity event. Appends to activity-feed.jsonl."""
+    data = request.get_json()
+    if not data:
+        abort(400, description="Invalid JSON payload")
+
+    entry = {
+        "timestamp": data.get("timestamp", now_iso()),
+        "agent": data.get("agent", "unknown"),
+        "action": data.get("action", "note"),
+        "message": data.get("message", ""),
+        "metadata": data.get("metadata", {}),
+    }
+
+    path = _data_path("activity-feed.jsonl")
+    with open(path, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+    return jsonify(entry), 201
 
 
 @app.route("/api/office/meeting-room", methods=["GET"])
@@ -105,11 +155,9 @@ def post_message():
     if not data:
         abort(400, description="Invalid JSON payload")
 
-    # Append to the main-office transcript by default
     room_id = data.get("room_id", "main-office")
     transcript_path = _data_path(os.path.join("transcripts", f"{room_id}.jsonl"))
 
-    # Ensure transcripts dir exists
     os.makedirs(os.path.dirname(transcript_path), exist_ok=True)
 
     with open(transcript_path, "a") as f:
@@ -138,6 +186,41 @@ def get_tasks():
     return jsonify(tasks)
 
 
+@app.route("/api/tasks/<task_id>", methods=["PATCH"])
+def update_task(task_id):
+    """Update a task's status and optionally other fields."""
+    data = request.get_json()
+    if not data:
+        abort(400, description="Invalid JSON payload")
+
+    tasks_data = read_json("tasks.json") or {"tasks": []}
+    tasks = tasks_data.get("tasks", [])
+    task = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        abort(404, description=f"Task '{task_id}' not found")
+
+    allowed = {"status", "assignee", "priority", "urgency", "is_blocked"}
+    for key, val in data.items():
+        if key in allowed:
+            task[key] = val
+
+    task["last_updated"] = now_iso()
+
+    # Append to activity_log
+    if "status" in data:
+        task.setdefault("activity_log", []).append({
+            "timestamp": now_iso(),
+            "status": data["status"],
+            "note": data.get("note", f"Status updated to {data['status']}")
+        })
+        # Set completion timestamp
+        if data["status"] == "done" and not task.get("completedAt"):
+            task["completedAt"] = now_iso()
+
+    write_json("tasks.json", tasks_data)
+    return jsonify(task)
+
+
 @app.route("/api/projects", methods=["GET"])
 def get_projects():
     projects = read_json("projects.json")
@@ -152,6 +235,47 @@ def get_ideas():
     if not ideas:
         return jsonify({"ideas": []})
     return jsonify(ideas)
+
+
+@app.route("/api/ideas", methods=["POST"])
+def post_idea():
+    """Capture a new idea from any source (UI, Telegram, agent)."""
+    data = request.get_json()
+    if not data:
+        abort(400, description="Invalid JSON payload")
+
+    ideas_data = read_json("ideas.json") or {"ideas": [], "nextId": 1}
+    ideas = ideas_data.get("ideas", [])
+    next_id = ideas_data.get("nextId", len(ideas) + 1)
+
+    idea = {
+        "id": f"IDEA-{next_id:03d}",
+        "title": data.get("title", "Untitled Idea"),
+        "description": data.get("description", ""),
+        "category": data.get("category", "research"),
+        "source": data.get("source", "api"),
+        "capturedAt": now_iso(),
+        "status": "new",
+        "tags": data.get("tags", []),
+    }
+
+    ideas.append(idea)
+    ideas_data["ideas"] = ideas
+    ideas_data["nextId"] = next_id + 1
+    write_json("ideas.json", ideas_data)
+
+    # Also log to activity feed
+    activity_path = _data_path("activity-feed.jsonl")
+    with open(activity_path, "a") as f:
+        f.write(json.dumps({
+            "timestamp": idea["capturedAt"],
+            "agent": data.get("source", "api"),
+            "action": "idea_captured",
+            "message": f"New idea captured: {idea['title']}",
+            "metadata": {"ideaId": idea["id"]},
+        }) + "\n")
+
+    return jsonify(idea), 201
 
 
 @app.route("/api/blockers", methods=["GET"])
@@ -183,7 +307,7 @@ def search_semantic():
 
 
 # ---------------------------------------------------------------------------
-# GitHub integration routes (from api/app.py)
+# GitHub integration routes
 # ---------------------------------------------------------------------------
 
 @app.route("/api/github/health", methods=["GET"])
