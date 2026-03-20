@@ -254,16 +254,48 @@ def storage_get_projects() -> dict:
 # ── Agents ────────────────────────────────────────────────────────────────────
 
 def storage_get_agents() -> dict:
-    if USE_DB:
-        agents = {a.id: a.to_dict() for a in Agent.query.all()}
-        active = sum(1 for a in agents.values() if a["status"] in ("active", "busy"))
-        return {
-            "version": 2, "lastUpdated": _now_iso(),
-            "agents": agents,
-            "metadata": {"totalAgents": len(agents), "activeAgents": active, "idleAgents": len(agents) - active},
-        }
+    """
+    agents-registry.json is the canonical source of agent definitions.
+    When DB is available, live status fields (status, lastSeen, currentTask, currentModel)
+    are overlaid from the DB on top — so new agents show up immediately without re-seeding.
+    """
+    # Always start from the JSON file as the definition source
+    registry = _read_json("agents-registry.json") or {"agents": {}, "metadata": {}}
+    agents = registry.get("agents", {})
 
-    return _read_json("agents-registry.json") or {"agents": {}, "metadata": {"totalAgents": 0}}
+    if USE_DB:
+        # Overlay live status from DB where a row exists
+        try:
+            db_agents = {a.id: a for a in Agent.query.all()}
+            for agent_id, agent_def in agents.items():
+                if agent_id in db_agents:
+                    db_row = db_agents[agent_id]
+                    # Only overlay mutable live fields — don't clobber the registry config
+                    if db_row.status:
+                        agent_def["status"] = db_row.status
+                    if db_row.current_task:
+                        agent_def["currentTask"] = db_row.current_task
+                    if db_row.current_model:
+                        agent_def["currentModel"] = db_row.current_model
+                    if db_row.last_seen:
+                        agent_def["lastSeen"] = db_row.last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    if db_row.last_activity:
+                        agent_def["lastActivity"] = db_row.last_activity
+        except Exception as e:
+            print(f"[storage_get_agents] DB overlay skipped: {e}")
+
+    active = sum(1 for a in agents.values() if a.get("status") in ("active", "busy"))
+    registry["agents"] = agents
+    registry["metadata"] = {
+        "totalAgents": len(agents),
+        "activeAgents": active,
+        "idleAgents": len(agents) - active,
+        "mesh_version": registry.get("metadata", {}).get("mesh_version", "1.0.0"),
+        "triage_agent": "aeva",
+        "dispatch_endpoint": "/api/agents/dispatch",
+    }
+    return registry
+
 
 
 def storage_save_agent(agent_id: str, updates: dict) -> dict:
