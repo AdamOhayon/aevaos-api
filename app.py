@@ -1,5 +1,6 @@
 """
-AevaOS Mission Control API v1.4.0
+AevaOS Mission Control API v1.5.0
+v1.5.0 — ACP multi-agent mesh: triage dispatch, per-agent model routing, self-learning feedback
 v1.4.0 — PostgreSQL migration via SQLAlchemy (dual-mode: DB or JSON fallback)
 v1.3.0 — Daily briefing, SSE activity stream, task detail, unified search, blockers write
 v1.2.0 — Smart alerts, analytics summary, POST tasks, task filtering
@@ -46,7 +47,9 @@ from storage import (
     storage_get_messages, storage_save_message,
     storage_get_blockers, storage_save_blocker,
     storage_get_credits,
+    storage_log_dispatch, storage_get_dispatches, storage_add_feedback,
 )
+from triage import dispatch as triage_dispatch
 
 # ── JSON helpers (still used for credits + briefing where no DB model) ────────
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -191,6 +194,96 @@ def post_activity():
         metadata=data.get("metadata", {}),
     )
     return jsonify(entry), 201
+
+
+# ---------------------------------------------------------------------------
+# ACP Dispatch — multi-agent mesh
+# ---------------------------------------------------------------------------
+
+@app.route("/api/agents/dispatch", methods=["POST"])
+def agent_dispatch():
+    """
+    POST /api/agents/dispatch
+    Body: { message, context?, thread_id? }
+    Classifies the message, routes to best agent + model, calls OpenRouter, logs result.
+    """
+    body = request.get_json()
+    if not body or not body.get("message"):
+        abort(400, description="'message' is required")
+
+    message   = body["message"]
+    context   = body.get("context", {})
+    thread_id = body.get("thread_id")
+
+    response = triage_dispatch(
+        message=message,
+        context=context,
+        thread_id=thread_id,
+    )
+
+    # Enrich with input for logging
+    from dataclasses import asdict
+    resp_dict = asdict(response)
+    resp_dict["input_message"] = message
+    resp_dict["context_snapshot"] = context
+
+    try:
+        storage_log_dispatch(resp_dict)
+    except Exception as log_err:
+        print(f"[dispatch] log error: {log_err}")
+
+    storage_append_activity(
+        agent=response.agent,
+        action="dispatch",
+        message=f"Dispatched '{message[:60]}...' → {response.agent} ({response.model})",
+        metadata={
+            "dispatch_id": response.dispatch_id,
+            "classification": resp_dict.get("classification"),
+            "latency_ms": response.latency_ms,
+            "status": response.status,
+        }
+    )
+
+    return jsonify(resp_dict)
+
+
+@app.route("/api/agents/dispatch/history", methods=["GET"])
+def dispatch_history():
+    """
+    GET /api/agents/dispatch/history?limit=50&agent=clara
+    Returns recent dispatch log entries.
+    """
+    limit = request.args.get("limit", 50, type=int)
+    agent = request.args.get("agent")
+    dispatches = storage_get_dispatches(limit=limit, agent=agent)
+    return jsonify({"dispatches": dispatches, "count": len(dispatches)})
+
+
+@app.route("/api/agents/feedback", methods=["POST"])
+def agent_feedback():
+    """
+    POST /api/agents/feedback
+    Body: { dispatch_id, rating (1-5), note?, routing_correct? }
+    Used by Aeva for self-learning from response quality.
+    """
+    body = request.get_json()
+    if not body or not body.get("dispatch_id") or not body.get("rating"):
+        abort(400, description="'dispatch_id' and 'rating' are required")
+
+    result = storage_add_feedback(
+        dispatch_id=body["dispatch_id"],
+        rating=int(body["rating"]),
+        note=body.get("note"),
+        routing_correct=body.get("routing_correct"),
+    )
+
+    storage_append_activity(
+        agent="system",
+        action="feedback_logged",
+        message=f"Dispatch {body['dispatch_id'][:8]}... rated {body['rating']}/5",
+        metadata={"dispatch_id": body["dispatch_id"], "rating": body["rating"]},
+    )
+    return jsonify(result)
 
 
 # ---------------------------------------------------------------------------

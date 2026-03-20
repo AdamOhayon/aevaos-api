@@ -206,3 +206,54 @@ class BlockerScan(db.Model):
             "source":      self.source,
             "blockers":    self.blockers or [],
         }
+
+
+class DispatchLog(db.Model):
+    """Records every agent dispatch for history, auditing, and Aeva self-learning."""
+    __tablename__ = "dispatch_logs"
+
+    id                     = db.Column(db.String(36),  primary_key=True)
+    thread_id              = db.Column(db.String(36),  nullable=True, index=True)
+    timestamp              = db.Column(db.DateTime,    default=datetime.utcnow, index=True)
+    input_message          = db.Column(db.Text,        nullable=False)
+    context_snapshot       = db.Column(db.JSON,        default=dict)
+    classification_type    = db.Column(db.String(50),  nullable=True, index=True)
+    classification_complexity = db.Column(db.String(20), nullable=True)
+    classification_confidence = db.Column(db.Float,    nullable=True)
+    classification_signals = db.Column(db.JSON,        default=list)
+    agent                  = db.Column(db.String(50),  nullable=True, index=True)
+    model                  = db.Column(db.String(100), nullable=True)
+    system_prompt_used     = db.Column(db.Text,        nullable=True)
+    response               = db.Column(db.Text,        nullable=True)
+    latency_ms             = db.Column(db.Integer,     nullable=True)
+    status                 = db.Column(db.String(50),  default="pending", index=True)
+    error                  = db.Column(db.Text,        nullable=True)
+    feedback_rating        = db.Column(db.Integer,     nullable=True)  # 1-5
+    feedback_note          = db.Column(db.Text,        nullable=True)
+    routing_correct        = db.Column(db.Boolean,     nullable=True)
+
+    def to_dict(self):
+        return {
+            "id":           self.id,
+            "thread_id":    self.thread_id,
+            "timestamp":    self.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") if self.timestamp else None,
+            "input_message": self.input_message,
+            "classification": {
+                "type":       self.classification_type,
+                "complexity": self.classification_complexity,
+                "confidence": self.classification_confidence,
+                "signals":    self.classification_signals or [],
+            },
+            "agent":        self.agent,
+            "model":        self.model,
+            "response":     self.response,
+            "latency_ms":   self.latency_ms,
+            "status":       self.status,
+            "error":        self.error,
+            "feedback": {
+                "rating":          self.feedback_rating,
+                "note":            self.feedback_note,
+                "routing_correct": self.routing_correct,
+            } if self.feedback_rating is not None else None,
+        }
+

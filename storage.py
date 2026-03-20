@@ -435,3 +435,104 @@ def storage_save_blocker(entry: dict) -> dict:
 def storage_get_credits() -> dict:
     # Credits are still read from JSON (updated by external scripts)
     return _read_json("credit-status.json") or {"providers": {}, "lastChecked": None}
+
+
+# ── Dispatch Logs (ACP Mesh) ──────────────────────────────────────────────────
+
+def storage_log_dispatch(response_obj) -> dict:
+    """
+    Persist an AgentResponse to the dispatch_logs table (DB) or dispatches.jsonl (JSON).
+    Accepts an AgentResponse dataclass or dict.
+    """
+    from dataclasses import asdict as dc_asdict
+    import datetime as dt
+
+    try:
+        data = dc_asdict(response_obj) if hasattr(response_obj, "__dataclass_fields__") else response_obj
+    except Exception:
+        data = response_obj
+
+    if USE_DB:
+        from models import DispatchLog
+        cl = data.get("classification", {})
+        row = DispatchLog(
+            id=data["dispatch_id"],
+            thread_id=data.get("thread_id"),
+            timestamp=dt.datetime.utcnow(),
+            input_message=data.get("input_message", ""),
+            context_snapshot=data.get("context_snapshot", {}),
+            classification_type=cl.get("task_type"),
+            classification_complexity=cl.get("complexity"),
+            classification_confidence=cl.get("confidence"),
+            classification_signals=cl.get("signals", []),
+            agent=data.get("agent"),
+            model=data.get("model"),
+            response=data.get("response"),
+            latency_ms=data.get("latency_ms"),
+            status=data.get("status", "success"),
+            error=data.get("error"),
+        )
+        db.session.add(row)
+        db.session.commit()
+        return row.to_dict()
+
+    # JSON fallback
+    record = {
+        "dispatch_id": data.get("dispatch_id"),
+        "thread_id":   data.get("thread_id"),
+        "timestamp":   _now_iso(),
+        "input_message": data.get("input_message", ""),
+        "classification": data.get("classification", {}),
+        "agent":       data.get("agent"),
+        "model":       data.get("model"),
+        "response":    data.get("response"),
+        "latency_ms":  data.get("latency_ms"),
+        "status":      data.get("status", "success"),
+        "error":       data.get("error"),
+    }
+    path = _data_path("dispatches.jsonl")
+    with open(path, "a") as f:
+        f.write(json.dumps(record) + "\n")
+    return record
+
+
+def storage_get_dispatches(limit: int = 50, agent: str = None) -> list:
+    """Return recent dispatch history, newest first."""
+    if USE_DB:
+        from models import DispatchLog
+        q = DispatchLog.query.order_by(DispatchLog.timestamp.desc())
+        if agent:
+            q = q.filter(DispatchLog.agent == agent)
+        return [r.to_dict() for r in q.limit(limit).all()]
+
+    entries = _read_jsonl("dispatches.jsonl", limit * 2)
+    if agent:
+        entries = [e for e in entries if e.get("agent") == agent]
+    return list(reversed(entries[-limit:]))
+
+
+def storage_add_feedback(dispatch_id: str, rating: int, note: str = None,
+                         routing_correct: bool = None) -> dict:
+    """Add quality feedback to an existing dispatch — enables Aeva self-learning."""
+    if USE_DB:
+        from models import DispatchLog
+        row = DispatchLog.query.get(dispatch_id)
+        if not row:
+            return {"error": "dispatch not found"}
+        row.feedback_rating = rating
+        row.feedback_note = note
+        if routing_correct is not None:
+            row.routing_correct = routing_correct
+        db.session.commit()
+        return row.to_dict()
+
+    # JSON mode: can't easily update, just log feedback separately
+    feedback = {
+        "dispatch_id": dispatch_id, "rating": rating,
+        "note": note, "routing_correct": routing_correct, "timestamp": _now_iso()
+    }
+    path = _data_path("dispatch-feedback.jsonl")
+    with open(path, "a") as f:
+        f.write(json.dumps(feedback) + "\n")
+    return feedback
+
