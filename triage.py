@@ -2,13 +2,22 @@
 triage.py — AevaOS Dispatch & Triage Engine
 ============================================
 Classifies incoming tasks, selects the right agent + model,
-builds context-aware prompts, and calls OpenRouter to execute.
+builds context-aware prompts, and executes via the right API.
+
+API routing strategy:
+  - Clara  → OpenAI API directly (OPENAI_API_KEY)  — codex-mini-latest
+  - Others → OpenRouter (OPENROUTER_API_KEY)       — claude/gemini/etc.
+
+Fallback chain (when primary fails):
+  1. Primary model fails → try secondary model on same API
+  2. OpenRouter out of credits → try Anthropic API directly (ANTHROPIC_API_KEY)
+  3. All fail → return structured error
 
 Flow:
   1. classify_task(message, context) → TaskClassification
-  2. build_context_package(classification, message, context) → dict
-  3. call_agent(package, api_key) → AgentResponse
-  4. Everything logged to DispatchLog table
+  2. build_agent_prompt(classification, message, context) → (system, user)
+  3. call_* → response text
+  4. Return AgentResponse
 """
 
 import json
@@ -16,6 +25,7 @@ import os
 import re
 import time
 import urllib.request
+import urllib.error
 import uuid
 from dataclasses import dataclass, asdict
 from typing import Optional
@@ -54,20 +64,40 @@ TASK_SIGNALS = {
     ]
 }
 
-# Agent → preferred model mapping (mirrors agents-registry.json)
-AGENT_MODELS = {
-    "aeva":     "anthropic/claude-sonnet-4-5",
-    "clara":    "openai/o3",
-    "pixel":    "google/gemini-2.5-pro-preview",
-    "sage":     "anthropic/claude-haiku-4-5",
+# ---------------------------------------------------------------------------
+# Agent model configuration
+#
+# Clara routes directly to OpenAI (OPENAI_API_KEY).
+# All other agents route through OpenRouter (OPENROUTER_API_KEY).
+# When an agent needs a "router" key for OR routing, set use_openai=False.
+# ---------------------------------------------------------------------------
+
+AGENT_CONFIG = {
+    "aeva": {
+        "primary_model":   "anthropic/claude-sonnet-4-5",
+        "fallback_model":  "anthropic/claude-haiku-4-5",
+        "use_openai":      False,   # → OpenRouter
+    },
+    "clara": {
+        "primary_model":   "codex-mini-latest",
+        "fallback_model":  "gpt-4.1",           # direct OpenAI fallback
+        "use_openai":      True,    # → direct OpenAI API
+    },
+    "pixel": {
+        "primary_model":   "google/gemini-2.5-pro-preview",
+        "fallback_model":  "google/gemini-2.0-flash-001",
+        "use_openai":      False,   # → OpenRouter
+    },
+    "sage": {
+        "primary_model":   "anthropic/claude-haiku-4-5",
+        "fallback_model":  "anthropic/claude-sonnet-4-5",
+        "use_openai":      False,   # → OpenRouter
+    },
 }
 
-AGENT_FALLBACK_MODELS = {
-    "aeva":  "anthropic/claude-opus-4-5",
-    "clara": "openai/o4-mini",
-    "pixel": "google/gemini-2.0-flash-001",
-    "sage":  "anthropic/claude-sonnet-4-5",
-}
+# These are the model strings exposed in API responses / agent registry UI
+AGENT_MODELS      = {k: v["primary_model"]  for k, v in AGENT_CONFIG.items()}
+AGENT_FALLBACK_MODELS = {k: v["fallback_model"] for k, v in AGENT_CONFIG.items()}
 
 TYPE_TO_AGENT = {
     "coding":       "clara",
@@ -82,6 +112,9 @@ COMPLEXITY_THRESHOLDS = {
     "medium": (0.3, 0.65),
     "high":   (0.65, 1.0),
 }
+
+# Anthropic direct API — used as last-resort fallback when OpenRouter is out
+ANTHROPIC_FALLBACK_MODEL = "claude-3-5-haiku-20241022"
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +141,8 @@ class AgentResponse:
     classification: dict
     response: str
     latency_ms: int
-    status: str             # success|error|needs_clarification
+    status: str             # success|success_fallback|dry_run|error
+    api_used: str           # openai|openrouter|anthropic_direct
     error: Optional[str] = None
 
 
@@ -120,12 +154,10 @@ def classify_task(message: str, context: dict = None) -> TaskClassification:
     """
     Analyse the message and return a TaskClassification.
     Uses keyword density scoring per type.
-    Complexity is scored from message length + technical depth.
     """
     text = message.lower()
     context = context or {}
 
-    # Score each type
     type_scores = {}
     matched_signals = {}
     for task_type, keywords in TASK_SIGNALS.items():
@@ -134,18 +166,15 @@ def classify_task(message: str, context: dict = None) -> TaskClassification:
         type_scores[task_type] = score
         matched_signals[task_type] = hits
 
-    # Pick best type
     best_type = max(type_scores, key=type_scores.get)
     best_score = type_scores[best_type]
 
-    # If no strong signal, fall back to general → Aeva
     if best_score < 0.02:
         best_type = "general"
         best_score = 0.5
 
-    confidence = min(1.0, best_score * 8)  # scale up to readable range
+    confidence = min(1.0, best_score * 8)
 
-    # Complexity scoring
     words = len(text.split())
     has_multiple_tasks = bool(re.search(r'(\band\b.*\band\b|also|additionally|furthermore|\n[-*•])', text))
     has_code_refs = bool(re.search(r'`[^`]+`|\.py|\.ts|\.tsx|function|class |def |\bapi\b', text))
@@ -165,14 +194,11 @@ def classify_task(message: str, context: dict = None) -> TaskClassification:
     else:
         complexity = "high"
 
-    # Escalate model for high complexity
     agent = TYPE_TO_AGENT.get(best_type, "aeva")
-
-    # If high complexity research → upgrade to Sonnet
     if best_type == "research" and complexity == "high":
         agent = "aeva"
 
-    model = AGENT_MODELS[agent]
+    model = AGENT_CONFIG[agent]["primary_model"]
 
     return TaskClassification(
         task_type=best_type,
@@ -208,7 +234,7 @@ AGENT_SYSTEM_PROMPTS = {
     "pixel": (
         "You are Pixel, a UI/UX specialist in the AevaOS system. "
         "You receive design tasks with context about the existing visual system "
-        "(dark theme: bg-gray-950, accent blue-600, glass cards, Tailwind CSS). "
+        "(deep space dark theme, neon accents, glassmorphism, Tailwind CSS). "
         "Deliver precise CSS, component code, or design direction. Be visual and specific. "
         "Prefer subtle animations, glassmorphism, and micro-interactions."
     ),
@@ -222,18 +248,11 @@ AGENT_SYSTEM_PROMPTS = {
 
 
 def build_agent_prompt(classification: TaskClassification, message: str, context: dict = None) -> tuple:
-    """
-    Returns (system_prompt, user_message) for the chosen agent.
-    Injects relevant context slices per agent type.
-    """
     context = context or {}
     agent = classification.agent
-
     system = AGENT_SYSTEM_PROMPTS.get(agent, AGENT_SYSTEM_PROMPTS["aeva"])
 
-    # Build user message with context injection
     ctx_lines = []
-
     if context.get("active_tasks"):
         ctx_lines.append(f"**Active tasks:** {json.dumps(context['active_tasks'][:3])}")
     if context.get("project"):
@@ -246,28 +265,56 @@ def build_agent_prompt(classification: TaskClassification, message: str, context
         ctx_lines.append(f"**Context:** {context['custom']}")
 
     ctx_block = "\n".join(ctx_lines)
-    if ctx_block:
-        user_message = f"{ctx_block}\n\n---\n\n{message}"
-    else:
-        user_message = message
-
+    user_message = f"{ctx_block}\n\n---\n\n{message}" if ctx_block else message
     return system, user_message
 
 
 # ---------------------------------------------------------------------------
-# OpenRouter API call
+# API callers
 # ---------------------------------------------------------------------------
 
-def call_openrouter(model: str, system_prompt: str, user_message: str, api_key: str) -> str:
+def call_openai(model: str, system_prompt: str, user_message: str, api_key: str) -> str:
     """
-    Makes a chat completion call to OpenRouter.
-    Returns the response text or raises on error.
+    Direct OpenAI Chat Completions call.
+    Used by Clara with OPENAI_API_KEY for Codex models.
     """
     payload = json.dumps({
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
+            {"role": "user",   "content": user_message},
+        ],
+        "max_completion_tokens": 8192,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type":  "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+
+    choices = result.get("choices", [])
+    if not choices:
+        raise ValueError(f"No choices in OpenAI response: {result}")
+    return choices[0]["message"]["content"]
+
+
+def call_openrouter(model: str, system_prompt: str, user_message: str, api_key: str) -> str:
+    """
+    OpenRouter chat completions call.
+    Used by Aeva, Pixel, Sage (and Clara fallback if OpenAI fails).
+    """
+    payload = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_message},
         ],
         "temperature": 0.7,
         "max_tokens": 4096,
@@ -278,99 +325,194 @@ def call_openrouter(model: str, system_prompt: str, user_message: str, api_key: 
         data=payload,
         headers={
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://aeva.os",
-            "X-Title": "AevaOS Dispatch",
+            "Content-Type":  "application/json",
+            "HTTP-Referer":  "https://aeva.os",
+            "X-Title":       "AevaOS Dispatch",
         },
         method="POST",
     )
-
     with urllib.request.urlopen(req, timeout=90) as resp:
         result = json.loads(resp.read().decode("utf-8"))
 
     choices = result.get("choices", [])
     if not choices:
         raise ValueError(f"No choices in OpenRouter response: {result}")
-
     return choices[0]["message"]["content"]
+
+
+def call_anthropic_direct(model: str, system_prompt: str, user_message: str, api_key: str) -> str:
+    """
+    Direct Anthropic Messages API call.
+    Used as a last-resort fallback when OpenRouter has no credits.
+    """
+    payload = json.dumps({
+        "model":      model,
+        "max_tokens": 4096,
+        "system":     system_prompt,
+        "messages": [
+            {"role": "user", "content": user_message},
+        ],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key":         api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type":      "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=90) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+
+    content = result.get("content", [])
+    if not content:
+        raise ValueError(f"No content in Anthropic response: {result}")
+    return content[0].get("text", "")
+
+
+def _is_credit_error(exc: Exception) -> bool:
+    """Return True if the exception looks like an out-of-credits / 402 error."""
+    msg = str(exc).lower()
+    return any(x in msg for x in ["402", "insufficient", "credit", "payment", "quota", "balance"])
 
 
 # ---------------------------------------------------------------------------
 # Main dispatch function
 # ---------------------------------------------------------------------------
 
-def dispatch(message: str, context: dict = None, thread_id: str = None, api_key: str = None) -> AgentResponse:
+def dispatch(message: str, context: dict = None, thread_id: str = None,
+             openrouter_key: str = None, openai_key: str = None,
+             anthropic_key: str = None) -> AgentResponse:
     """
     Full dispatch pipeline:
       1. Classify task
       2. Build context-aware prompt
-      3. Call OpenRouter
-      4. Return structured AgentResponse
+      3. Route to the correct API:
+         - Clara → OpenAI direct (codex-mini-latest)
+         - Others → OpenRouter
+      4. On failure, try fallback model on the same API
+      5. If OpenRouter out of credits → Anthropic direct (backup)
+      6. Return structured AgentResponse
 
-    If api_key is None, reads from OPENROUTER_API_KEY env var.
+    Keys default to env vars if not passed explicitly.
     """
-    api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
-    thread_id = thread_id or str(uuid.uuid4())
+    openrouter_key  = openrouter_key  or os.environ.get("OPENROUTER_API_KEY",  "")
+    openai_key      = openai_key      or os.environ.get("OPENAI_API_KEY",      "")
+    anthropic_key   = anthropic_key   or os.environ.get("ANTHROPIC_API_KEY",   "")
+
+    thread_id   = thread_id or str(uuid.uuid4())
     dispatch_id = str(uuid.uuid4())
-    context = context or {}
+    context     = context or {}
 
     # 1. Classify
     classification = classify_task(message, context)
+    agent  = classification.agent
+    config = AGENT_CONFIG[agent]
 
     # 2. Build prompts
     system_prompt, user_message = build_agent_prompt(classification, message, context)
 
-    # 3. Call OpenRouter (or return dry-run if no API key)
-    start = time.time()
-    try:
-        if not api_key:
-            response_text = (
-                f"[DRY RUN — OPENROUTER_API_KEY not set]\n\n"
-                f"Would dispatch to **{classification.agent}** ({classification.model})\n"
-                f"Task type: {classification.task_type} | Complexity: {classification.complexity} | "
-                f"Confidence: {classification.confidence}"
-            )
-            status = "dry_run"
-        else:
-            response_text = call_openrouter(
-                model=classification.model,
-                system_prompt=system_prompt,
-                user_message=user_message,
-                api_key=api_key,
-            )
-            status = "success"
-        error = None
-    except Exception as e:
-        response_text = f"[Error calling {classification.model}: {e}]"
-        status = "error"
-        error = str(e)
+    primary_model    = config["primary_model"]
+    fallback_model   = config["fallback_model"]
+    use_openai_direct = config["use_openai"]
 
-        # Try fallback model
-        if api_key and classification.agent in AGENT_FALLBACK_MODELS:
-            fallback = AGENT_FALLBACK_MODELS[classification.agent]
+    # 3. Execute with fallback chain
+    start = time.time()
+    response_text = ""
+    status   = "error"
+    api_used = "none"
+    error    = None
+
+    # ── DRY RUN when no keys available ──────────────────────────────────────
+    if not openrouter_key and not (use_openai_direct and openai_key):
+        response_text = (
+            f"[DRY RUN — no API keys configured]\n\n"
+            f"Would dispatch to **{agent}** ({primary_model})\n"
+            f"Task type: {classification.task_type} | "
+            f"Complexity: {classification.complexity} | "
+            f"Confidence: {classification.confidence}"
+        )
+        status   = "dry_run"
+        api_used = "none"
+        error    = None
+
+    # ── CLARA: direct OpenAI path ────────────────────────────────────────────
+    elif use_openai_direct and openai_key:
+        try:
+            response_text = call_openai(primary_model, system_prompt, user_message, openai_key)
+            status   = "success"
+            api_used = "openai"
+            classification.model = primary_model
+        except Exception as e1:
+            error = str(e1)
+            # Fallback: try secondary OpenAI model
             try:
-                response_text = call_openrouter(
-                    model=fallback,
-                    system_prompt=system_prompt,
-                    user_message=user_message,
-                    api_key=api_key,
-                )
-                classification.model = fallback  # record actual model used
-                status = "success_fallback"
+                response_text = call_openai(fallback_model, system_prompt, user_message, openai_key)
+                status   = "success_fallback"
+                api_used = "openai"
+                classification.model = fallback_model
                 error = None
-            except Exception as fe:
-                error = f"Primary: {e} | Fallback: {fe}"
+            except Exception as e2:
+                error = f"Primary: {e1} | Fallback: {e2}"
+                response_text = f"[Clara error — OpenAI unreachable: {error}]"
+
+    # ── ALL OTHERS: OpenRouter path ──────────────────────────────────────────
+    else:
+        if not openrouter_key:
+            response_text = "[No OPENROUTER_API_KEY configured]"
+            status   = "error"
+            api_used = "none"
+        else:
+            try:
+                response_text = call_openrouter(primary_model, system_prompt, user_message, openrouter_key)
+                status   = "success"
+                api_used = "openrouter"
+                classification.model = primary_model
+            except Exception as e1:
+                error = str(e1)
+
+                # Fallback A: try fallback model on OpenRouter
+                try:
+                    response_text = call_openrouter(fallback_model, system_prompt, user_message, openrouter_key)
+                    status   = "success_fallback"
+                    api_used = "openrouter"
+                    classification.model = fallback_model
+                    error    = None
+                except Exception as e2:
+                    # Fallback B: if credit/quota issue → use Anthropic direct
+                    if (_is_credit_error(e1) or _is_credit_error(e2)) and anthropic_key:
+                        try:
+                            response_text = call_anthropic_direct(
+                                ANTHROPIC_FALLBACK_MODEL,
+                                system_prompt,
+                                user_message,
+                                anthropic_key,
+                            )
+                            status   = "success_anthropic_direct"
+                            api_used = "anthropic_direct"
+                            classification.model = ANTHROPIC_FALLBACK_MODEL
+                            error    = None
+                        except Exception as e3:
+                            error = f"OR primary: {e1} | OR fallback: {e2} | Anthropic direct: {e3}"
+                            response_text = f"[All APIs failed: {error}]"
+                    else:
+                        error = f"Primary: {e1} | Fallback: {e2}"
+                        response_text = f"[OpenRouter error: {error}]"
 
     latency_ms = int((time.time() - start) * 1000)
 
     return AgentResponse(
         dispatch_id=dispatch_id,
         thread_id=thread_id,
-        agent=classification.agent,
+        agent=agent,
         model=classification.model,
         classification=asdict(classification),
         response=response_text,
         latency_ms=latency_ms,
         status=status,
+        api_used=api_used,
         error=error,
     )

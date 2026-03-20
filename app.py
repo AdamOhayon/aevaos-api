@@ -276,7 +276,11 @@ def agent_dispatch():
     """
     POST /api/agents/dispatch
     Body: { message, context?, thread_id? }
-    Classifies the message, routes to best agent + model, calls OpenRouter, logs result.
+
+    API routing:
+      - Clara  → OpenAI direct (OPENAI_API_KEY)  — codex-mini-latest
+      - Others → OpenRouter (OPENROUTER_API_KEY) — claude/gemini/etc.
+      - Fallback when OpenRouter out of credits → Anthropic direct (ANTHROPIC_API_KEY)
     """
     body = request.get_json()
     if not body or not body.get("message"):
@@ -290,6 +294,9 @@ def agent_dispatch():
         message=message,
         context=context,
         thread_id=thread_id,
+        openrouter_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        openai_key=os.environ.get("OPENAI_API_KEY", ""),
+        anthropic_key=os.environ.get("ANTHROPIC_API_KEY", ""),
     )
 
     # Enrich with input for logging
