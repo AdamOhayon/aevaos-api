@@ -615,6 +615,35 @@ def get_projects():
 
 
 # ---------------------------------------------------------------------------
+# Project READMEs — stored as flat markdown files in data/project-readmes/
+# ---------------------------------------------------------------------------
+
+READMES_DIR = os.path.join(DATA_DIR, "project-readmes")
+os.makedirs(READMES_DIR, exist_ok=True)
+
+
+@app.route("/api/projects/<project_id>/readme", methods=["GET"])
+def get_project_readme(project_id):
+    safe_id = "".join(c for c in project_id if c.isalnum() or c in "-_")
+    path = os.path.join(READMES_DIR, f"{safe_id}.md")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return jsonify({"content": f.read(), "exists": True})
+    return jsonify({"content": "", "exists": False})
+
+
+@app.route("/api/projects/<project_id>/readme", methods=["PUT"])
+def put_project_readme(project_id):
+    safe_id = "".join(c for c in project_id if c.isalnum() or c in "-_")
+    body = request.get_json() or {}
+    content = body.get("content", "")
+    path = os.path.join(READMES_DIR, f"{safe_id}.md")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return jsonify({"saved": True, "size": len(content)})
+
+
+# ---------------------------------------------------------------------------
 # Ideas
 # ---------------------------------------------------------------------------
 
