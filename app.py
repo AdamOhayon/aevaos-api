@@ -126,8 +126,79 @@ with app.app_context():
 
 @app.route("/", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "aevaos-api", "version": "1.4.0",
+    return jsonify({"status": "ok", "service": "aevaos-api", "version": "1.5.0",
                     "storage": "postgresql" if _db_url else "json"})
+
+
+# ---------------------------------------------------------------------------
+# Auth — simple password-based session tokens
+# ---------------------------------------------------------------------------
+import hmac
+import hashlib
+import base64
+
+def _secret_key() -> str:
+    """Return the HMAC signing secret — falls back to a build-time constant if not set."""
+    return os.environ.get("AUTH_SECRET_KEY", "aevaos-default-insecure-key-change-me")
+
+def _make_token(payload: str) -> str:
+    """HMAC-SHA256 sign a payload string, return base64url token."""
+    sig = hmac.new(_secret_key().encode(), payload.encode(), hashlib.sha256).hexdigest()
+    raw = f"{payload}.{sig}"
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+def _verify_token(token: str) -> bool:
+    """Returns True if the token signature is valid and not expired."""
+    try:
+        raw = base64.urlsafe_b64decode(token.encode()).decode()
+        payload, sig = raw.rsplit(".", 1)
+        expected = hmac.new(_secret_key().encode(), payload.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return False
+        # Payload is "aevaos:<issued_ts>"
+        issued_at = int(payload.split(":")[1])
+        if time.time() - issued_at > 7 * 24 * 3600:  # 7-day expiry
+            return False
+        return True
+    except Exception:
+        return False
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    """
+    POST /api/auth/login  { password }
+    Validates against MISSION_CONTROL_PASSWORD env var.
+    Returns { token } on success.
+    """
+    body = request.get_json() or {}
+    password = body.get("password", "")
+    stored = os.environ.get("MISSION_CONTROL_PASSWORD", "")
+
+    if not stored:
+        return jsonify({"error": "Auth not configured — set MISSION_CONTROL_PASSWORD on Railway"}), 503
+
+    if not hmac.compare_digest(password, stored):
+        return jsonify({"error": "Invalid password"}), 401
+
+    payload = f"aevaos:{int(time.time())}"
+    token = _make_token(payload)
+    return jsonify({"token": token, "expires_in": 7 * 24 * 3600})
+
+
+@app.route("/api/auth/verify", methods=["POST"])
+def auth_verify():
+    """
+    POST /api/auth/verify  (Authorization: Bearer <token>)
+    Returns 200 if token is valid, 401 otherwise.
+    """
+    auth = request.headers.get("Authorization", "")
+    token = auth.removeprefix("Bearer ").strip()
+    if _verify_token(token):
+        return jsonify({"valid": True})
+    return jsonify({"valid": False, "error": "Invalid or expired token"}), 401
+
+
 
 
 @app.route("/api/health/db", methods=["GET"])
