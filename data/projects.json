@@ -2,64 +2,111 @@
   "version": 1,
   "projects": [
     {
-      "id": "aeva-os",
-      "name": "AevaOS Mission Control",
-      "description": "Custom control command center built within OpenClaw",
+      "id": "lifeos",
+      "name": "LifeOS / LifeTrack",
+      "description": "AI-powered self-discovery + modular life OS. Adam's life's work. Three pillars: AevaOS (private), LifeTrack (proprietary), LifeOS (open-source).",
       "status": "active",
       "priority": 1,
-      "github": null,
+      "github": "AdamOhayon/lifeOS",
       "health": "green",
-      "lastActivity": "2026-03-17T13:28:00Z"
+      "lastActivity": "2026-03-22T14:10:00Z",
+      "githubRepo": "AdamOhayon/lifeOS",
+      "lastCommit": "2026-03-22T14:10:00Z",
+      "openIssues": 0,
+      "openPRs": 0
+    },
+    {
+      "id": "mission-control-ui",
+      "name": "Mission Control UI",
+      "description": "Next.js frontend for AevaOS Mission Control. Feature-complete with auth, projects, tasks, office.",
+      "status": "active",
+      "priority": 2,
+      "github": "AdamOhayon/aevaos-mission-control-ui",
+      "health": "green",
+      "lastActivity": "2026-03-19T12:35:00Z",
+      "githubRepo": "AdamOhayon/aevaos-mission-control-ui",
+      "lastCommit": "2026-03-19T12:35:00Z",
+      "openIssues": 0,
+      "openPRs": 0,
+      "deployment": {
+        "platform": "Vercel",
+        "url": "https://aevaos-mission-control-ui.vercel.app",
+        "status": "live"
+      }
+    },
+    {
+      "id": "mission-control-api",
+      "name": "Mission Control API",
+      "description": "Flask backend with JWT auth, SQLAlchemy models, protected API routes. Code complete, pending Railway deployment.",
+      "status": "active",
+      "priority": 2,
+      "github": "AdamOhayon/aevaos-mission-control-api",
+      "health": "yellow",
+      "lastActivity": "2026-03-19T11:05:00Z",
+      "githubRepo": "AdamOhayon/aevaos-mission-control-api",
+      "lastCommit": "2026-03-19T11:05:00Z",
+      "openIssues": 0,
+      "openPRs": 0,
+      "deployment": {
+        "platform": "Railway",
+        "status": "pending-env-vars"
+      }
     },
     {
       "id": "leanleren",
       "name": "LeanLeren",
       "description": "Lean Six Sigma training platform - MAKING MONEY",
       "status": "active",
-      "priority": 2,
+      "priority": 3,
       "github": "AdamOhayon/leanleren",
       "health": "yellow",
-      "lastActivity": "2026-02-19T00:00:00Z"
+      "lastActivity": "2026-02-19T00:00:00Z",
+      "githubRepo": "AdamOhayon/leanleren",
+      "lastCommit": null,
+      "openIssues": 0,
+      "openPRs": 0
     },
     {
       "id": "pilotax",
       "name": "PiloTax",
       "description": "Dutch tax automation app",
       "status": "active",
-      "priority": 3,
+      "priority": 4,
       "github": "AdamOhayon/PiloTax",
       "health": "yellow",
-      "lastActivity": "2026-02-23T00:00:00Z"
+      "lastActivity": "2026-02-23T00:00:00Z",
+      "githubRepo": "AdamOhayon/PiloTax",
+      "lastCommit": null,
+      "openIssues": 0,
+      "openPRs": 0
     },
     {
       "id": "agent-to-agent-future",
       "name": "Agent-to-Agent Future",
       "description": "Vision for post-app world with agent-to-agent communication",
       "status": "active",
-      "priority": 4,
+      "priority": 5,
       "github": null,
       "health": "green",
-      "lastActivity": "2026-03-17T12:00:00Z"
+      "lastActivity": "2026-03-17T12:00:00Z",
+      "githubRepo": null,
+      "lastCommit": null,
+      "openIssues": 0,
+      "openPRs": 0
     },
     {
       "id": "crewplanet",
       "name": "CrewPlanet",
       "description": "Airline crew social app",
       "status": "paused",
-      "priority": 5,
+      "priority": 6,
       "github": "AdamOhayon/crewplanet",
       "health": "yellow",
-      "lastActivity": "2026-02-21T00:00:00Z"
-    },
-    {
-      "id": "lifeos",
-      "name": "LifeOS / LifeTrack",
-      "description": "AI-powered self-discovery + modular life OS. Dream project.",
-      "status": "paused",
-      "priority": 6,
-      "github": "AdamOhayon/lifeOS",
-      "health": "unknown",
-      "lastActivity": "2025-01-28T00:00:00Z"
+      "lastActivity": "2026-02-21T00:00:00Z",
+      "githubRepo": "AdamOhayon/crewplanet",
+      "lastCommit": null,
+      "openIssues": 0,
+      "openPRs": 0
     }
   ]
 }
