@@ -54,12 +54,12 @@
     {
       "id": "lifeos",
       "name": "LifeOS / LifeTrack",
-      "description": "AI-powered self-discovery + modular life OS. Dream project.",
-      "status": "paused",
-      "priority": 6,
-      "github": "AdamOhayon/lifeOS",
-      "health": "unknown",
-      "lastActivity": "2025-01-28T00:00:00Z"
+      "description": "AI-powered self-discovery platform + modular life OS. Dream project — Phase 0 architecture underway.",
+      "status": "active",
+      "priority": 3,
+      "github": "AdamOhayon/LifeTrack",
+      "health": "yellow",
+      "lastActivity": "2026-03-24T08:52:00Z"
     }
   ]
 }

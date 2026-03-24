@@ -232,8 +232,327 @@
       "priority_score": 0,
       "is_blocked": false,
       "days_stuck": 0
+    },
+    {
+      "id": "TASK-007",
+      "title": "[EPIC] Phase 0: Foundation & Architecture",
+      "description": "Stabilize existing codebase, audit everything, design unified architecture for LifeOS + LifeTrack ecosystem",
+      "project": "lifeos",
+      "status": "in-progress",
+      "assignee": "aeva",
+      "complexity": "high",
+      "urgency": "urgent",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "urgent",
+      "priority_score": 200,
+      "createdAt": "2026-03-22T14:19:54Z",
+      "createdBy": "ui",
+      "startedAt": "2026-03-24T08:52:00Z",
+      "completedAt": null,
+      "is_blocked": false,
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:54Z",
+          "status": "ready",
+          "note": "Task created by Aeva via Mission Control UI"
+        },
+        {
+          "timestamp": "2026-03-24T08:52:00Z",
+          "status": "in-progress",
+          "note": "Phase 0 execution started \u00e2\u20ac\u201d audits commissioned via Antigravity"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-008",
+      "title": "Audit LifeTrack codebase \u00e2\u20ac\u201d document models, assessment flow, AI logic",
+      "description": "Review all LifeTrack models (Digital Twin, assessments, fear mapping, etc). Map out what works vs placeholder. Document the assessment flow end-to-end. Identify the proprietary algorithm components.",
+      "project": "lifeos",
+      "status": "in-progress",
+      "assignee": "aeva",
+      "complexity": "medium",
+      "urgency": "high",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "high",
+      "priority_score": 160,
+      "createdAt": "2026-03-22T14:19:54Z",
+      "createdBy": "ui",
+      "startedAt": "2026-03-24T08:52:00Z",
+      "completedAt": null,
+      "is_blocked": false,
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:54Z",
+          "status": "ready",
+          "note": "Task created"
+        },
+        {
+          "timestamp": "2026-03-24T08:52:00Z",
+          "status": "in-progress",
+          "note": "Antigravity performing codebase audit from GitHub + local knowledge"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-009",
+      "title": "Audit AevaOS components \u00e2\u20ac\u201d Mission Control UI, API, data structures",
+      "description": "Document current state of Mission Control UI (Next.js/Vercel), API (Flask/Railway), and data structures. Map what exists, what works, what needs migration.",
+      "project": "lifeos",
+      "status": "in-progress",
+      "assignee": "aeva",
+      "complexity": "medium",
+      "urgency": "high",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "high",
+      "priority_score": 155,
+      "createdAt": "2026-03-22T14:19:54Z",
+      "createdBy": "ui",
+      "startedAt": "2026-03-24T08:52:00Z",
+      "completedAt": null,
+      "is_blocked": false,
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:54Z",
+          "status": "ready",
+          "note": "Task created"
+        },
+        {
+          "timestamp": "2026-03-24T08:52:00Z",
+          "status": "in-progress",
+          "note": "Antigravity auditing AevaOS components \u00e2\u20ac\u201d see TASK-009 notes for full audit"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-010",
+      "title": "Create unified data model specification",
+      "description": "Design the shared data models that will work across LifeOS and LifeTrack. PostgreSQL schema design. Define what data lives where and how systems communicate.",
+      "project": "lifeos",
+      "status": "ready",
+      "assignee": "aeva",
+      "complexity": "high",
+      "urgency": "high",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "high",
+      "priority_score": 140,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "startedAt": null,
+      "completedAt": null,
+      "is_blocked": true,
+      "blocked_by": [
+        "TASK-008",
+        "TASK-009"
+      ],
+      "days_stuck": 0,
+      "notes": [
+        "Blocked on TASK-008 and TASK-009 audits completing first"
+      ],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-011",
+      "title": "Design LifeOS plugin architecture",
+      "description": "Define how plugins (like LifeTrack) integrate with LifeOS. Plugin interface spec, authentication, data exchange format, event hooks.",
+      "project": "lifeos",
+      "status": "backlog",
+      "assignee": "aeva",
+      "complexity": "high",
+      "urgency": "medium",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "high",
+      "priority_score": 110,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "startedAt": null,
+      "completedAt": null,
+      "is_blocked": true,
+      "blocked_by": [
+        "TASK-010"
+      ],
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-012",
+      "title": "Design LifeTrack as a LifeOS plugin",
+      "description": "Define how LifeTrack plugs into LifeOS. API surface, data sync protocols, licensing mechanism.",
+      "project": "lifeos",
+      "status": "backlog",
+      "assignee": "aeva",
+      "complexity": "high",
+      "urgency": "medium",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "high",
+      "priority_score": 105,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "is_blocked": true,
+      "blocked_by": [
+        "TASK-011"
+      ],
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-013",
+      "title": "Create architecture diagrams and technical specification document",
+      "description": "Visual architecture diagrams: system components, data flow, deployment topology, plugin boundaries. North star spec document.",
+      "project": "lifeos",
+      "status": "backlog",
+      "assignee": "aeva",
+      "complexity": "medium",
+      "urgency": "medium",
+      "impact": "high",
+      "effort": "medium",
+      "priority": "high",
+      "priority_score": 95,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "is_blocked": true,
+      "blocked_by": [
+        "TASK-010",
+        "TASK-011"
+      ],
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-014",
+      "title": "Set up LifeOS repository structure",
+      "description": "Create lifeos-core repo (open-source). Node.js/TypeScript. Docker Compose. CI/CD with GitHub Actions.",
+      "project": "lifeos",
+      "status": "backlog",
+      "assignee": "clara",
+      "complexity": "medium",
+      "urgency": "medium",
+      "impact": "medium",
+      "effort": "medium",
+      "priority": "medium",
+      "priority_score": 80,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "is_blocked": true,
+      "blocked_by": [
+        "TASK-013"
+      ],
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-015",
+      "title": "Migrate Mission Control API from Flask to Node.js/TypeScript",
+      "description": "Rewrite AevaOS API in Node.js/TypeScript. Maintain all endpoints. Add PostgreSQL via Prisma or Drizzle ORM.",
+      "project": "lifeos",
+      "status": "backlog",
+      "assignee": "clara",
+      "complexity": "high",
+      "urgency": "low",
+      "impact": "medium",
+      "effort": "high",
+      "priority": "medium",
+      "priority_score": 50,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "is_blocked": true,
+      "blocked_by": [
+        "TASK-013"
+      ],
+      "days_stuck": 0,
+      "notes": [
+        "Low urgency \u00e2\u20ac\u201d Flask is working fine. Can wait until Phase 1."
+      ],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
+    },
+    {
+      "id": "TASK-016",
+      "title": "Research Viktor Frankl Logotherapy framework for LifeTrack integration",
+      "description": "Study Frankl's key concepts: Will to Meaning, Paradoxical Intention. Map to LifeTrack psychological framework.",
+      "project": "lifeos",
+      "status": "backlog",
+      "assignee": "aeva",
+      "complexity": "medium",
+      "urgency": "low",
+      "impact": "medium",
+      "effort": "medium",
+      "priority": "medium",
+      "priority_score": 45,
+      "createdAt": "2026-03-22T14:19:55Z",
+      "createdBy": "ui",
+      "is_blocked": false,
+      "days_stuck": 0,
+      "notes": [],
+      "activity_log": [
+        {
+          "timestamp": "2026-03-22T14:19:55Z",
+          "status": "ready",
+          "note": "Task created"
+        }
+      ],
+      "last_updated": "2026-03-24T08:52:00Z"
     }
   ],
   "version": 1,
-  "nextId": 7
+  "nextId": 17
 }
